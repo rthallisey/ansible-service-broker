@@ -1,4 +1,12 @@
 
+- oso_pv:
+    volumeName: bind-shared-pv
+    project_name: ansible-service-broker
+    requested_storage: "5Gi"
+    accessModes: "ReadWriteOnce"
+    metadata:
+    - name: "bind-shared-pv"
+
 - oso_service:
     service_name: asb
     project_name: ansible-service-broker
@@ -56,6 +64,10 @@
       app: ansible-service-broker
       service: asb
     deployment_name: asb
+    volumes:
+      - name: bind-shared
+        persistentVolumeClaim:
+          claimName: bind-shared-pv
     containers:
     - securityContext: {}
       name: asb
@@ -68,6 +80,9 @@
       args:
       - entrypoint.sh
       image: docker.io/ansibleapp/ansible-service-broker-asb:latest
+      volumeMounts:
+      - mountPath: /bind-shared
+        name: bind-shared
       ports:
       - 1338
     replace: true
