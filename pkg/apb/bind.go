@@ -38,5 +38,6 @@ func Bind(
 		return nil, err
 	}
 
-	return extractCredentials(output, log)
+	podname, _ := GetPodName(output, log)
+	return ExtractCredentials(podname, log)
 }

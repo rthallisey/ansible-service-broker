@@ -15,7 +15,7 @@ import (
 func Provision(
 	spec *Spec, context *Context, parameters *Parameters,
 	clusterConfig ClusterConfig, log *logging.Logger,
-) (*ExtractedCredentials, error) {
+) ([]byte, error) {
 	log.Notice("============================================================")
 	log.Notice("                       PROVISIONING                         ")
 	log.Notice("============================================================")
@@ -57,5 +57,6 @@ func Provision(
 		return nil, err
 	}
 
-	return extractCredentials(output, log)
+	//return ExtractCredentials(output, log)
+	return output, err
 }
