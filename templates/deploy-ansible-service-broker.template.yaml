@@ -42,15 +42,60 @@ objects:
     namespace: ansible-service-broker
 
 - apiVersion: v1
+  kind: ClusterRole
+  metadata:
+    name: ansible-service-broker
+  rules:
+    - apiGroups:
+      - ""
+      resources:
+      - pods
+      - projects
+      - pods/exec
+      - namespaces
+      verbs:
+      - create
+      - update
+      - delete
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - ""
+      resources:
+      - persistentvolumeclaims
+      - persistentvolumes
+      verbs:
+      - create
+      - update
+      - delete
+      - get
+    - apiGroups:
+      - ""
+      resources:
+      - serviceaccounts
+      - rolebindings
+      - clusterrolebindings
+      - clusterroles
+      verbs:
+      - create
+      - update
+      - delete
+      - get
+      - list
+
+- apiVersion: v1
   kind: ClusterRoleBinding
   metadata:
-    name: asb
+    name: asb-role-binding
   roleRef:
-    name: cluster-admin
+    name: ansible-service-broker
   subjects:
   - kind: ServiceAccount
     name: asb
     namespace: ansible-service-broker
+#  userNames:
+#    - system:serviceaccount:ansible-service-broker:asb
 
 - apiVersion: v1
   kind: Route
