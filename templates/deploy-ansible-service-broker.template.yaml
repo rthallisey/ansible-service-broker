@@ -53,7 +53,7 @@ objects:
     port:
       targetPort: port-1338
     tls:
-      termination: Reencrypt
+      termination: passthrough
 
 - apiVersion: v1
   kind: PersistentVolumeClaim
