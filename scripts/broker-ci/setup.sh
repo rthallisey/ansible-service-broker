@@ -11,8 +11,19 @@ RESOURCE_ERROR=false
 
 set -ex
 
+function cluster-gather {
+    if [ -n "${KUBERNETES}" ]; then
+	source "${BROKER_DIR}/scripts/broker-ci/kubernetes/gate.sh"
+    else
+	source "${BROKER_DIR}/scripts/broker-ci/openshift/gate.sh"
+    fi
+}
+
 function cluster-setup () {
-    git clone https://github.com/fusor/catasb
+    #git clone https://github.com/fusor/catasb
+    git clone https://github.com/rthallisey/catasb
+    git fetch
+    git checkout kubernetes-playbook
 
     cat <<EOF > "catasb/config/my_vars.yml"
 ---
@@ -21,25 +32,29 @@ dockerhub_org_name: ansibleplaybookbundle
 dockerhub_user_password: brokerciuser
 EOF
 
-    pushd catasb/local/gate/
-    ./run_gate.sh || CLUSTER_SETUP_ERROR=true
-    popd
-
+    run-gate
     env-error-check "cluster-setup"
 
+    # Kubernetes port: 6443
+    # OpenShift port: 8443
+    get-port
+
     cat <<EOF > "scripts/my_local_dev_vars"
-OPENSHIFT_SERVER_HOST=172.17.0.1
-OPENSHIFT_SERVER_PORT=8443
+CLUSTER_HOST=172.17.0.1
+CLUSTER_PORT=${PORT}
 
 # BROKER_IP_ADDR must be the IP address of where to reach broker
 #   it should not be 127.0.0.1, needs to be an address the pods will be able to reach
-BROKER_IP_ADDR=${OPENSHIFT_SERVER_HOST}
+BROKER_IP_ADDR=${CLUSTER_HOST}
 DOCKERHUB_USERNAME="brokerciuser"
 DOCKERHUB_PASSWORD="brokerciuser"
 DOCKERHUB_ORG="ansibleplaybookbundle"
+
 BOOTSTRAP_ON_STARTUP="true"
 BEARER_TOKEN_FILE=""
+BROKER_INSECURE="false"
 CA_FILE=""
+REFRESH_INTERVAL="600s"
 
 # Always, IfNotPresent, Never
 IMAGE_PULL_POLICY="Always"
@@ -74,13 +89,15 @@ function make-deploy {
 }
 
 function local-env() {
-    oc login --insecure-skip-tls-verify 172.17.0.1:8443 -u admin -p admin
-    oc project default
+    cluster-login
     make-build-image
     make-deploy
 }
 
 echo "========== Broker CI ==========="
+echo "Gathering cluster"
+cluster-gather
+
 echo "Setting up cluster"
 cluster-setup
 
