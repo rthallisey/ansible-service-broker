@@ -28,7 +28,6 @@ if [ -n "${KUBERNETES}" ]; then
 	echo "ERROR: Kubernetes uses port 6443, not ${KUBERNETES_SERVICE_PORT}"
 	exit 1
     fi
-    AUTO_ESCALATE=true
     source "${SCRIPT_DIR}/kubernetes/resources.sh"
 else
     echo "OpenShift Cluster"
@@ -235,5 +234,5 @@ broker:
   ssl_cert_key: ${TLS_KEY}
   ssl_cert: ${TLS_CRT}
   refresh_interval: "600s"
-  auto_escalate: ${AUTO_ESCALATE:-false}
+  auto_escalate: false
 EOF

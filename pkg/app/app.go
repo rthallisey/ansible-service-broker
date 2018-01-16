@@ -337,7 +337,10 @@ func (a *App) Start() {
 
 	rules := []rbac.PolicyRule{}
 	if !a.config.GetBool("broker.auto_escalate") {
+		fmt.Println("retrieveClusterRoleRules")
+		fmt.Println(a.config.GetString("openshift.sandbox_role"))
 		rules, err = retrieveClusterRoleRules(a.config.GetString("openshift.sandbox_role"))
+		fmt.Println(rules)
 		if err != nil {
 			log.Errorf("Unable to retrieve cluster roles rules from cluster\n"+
 				" You must be using OpenShift 3.7 to use the User rules check.\n%v", err)
@@ -426,6 +429,7 @@ func retrieveClusterRoleRules(clusterRole string) ([]rbac.PolicyRule, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(k8sRole)
 	return convertAPIRbacToK8SRbac(k8sRole).Rules, nil
 }
 

@@ -48,7 +48,7 @@ const (
 	ChangePodNetworkAnnotation = "pod.network.openshift.io/multitenant.change-network"
 )
 
-/* Start of V1 Authorizaiont rules need for openshift rest call */
+/* Start of V1 Authorizaion rules need for openshift rest call */
 var oldAllowAllPolicyRule = PolicyRule{APIGroups: nil, Verbs: []string{"*"}, Resources: []string{"*"}}
 
 // OpenshiftClient - Client to interact with openshift api
@@ -296,7 +296,7 @@ func newForConfig(c *rest.Config) (*OpenshiftClient, error) {
 	authConfig := *c
 	imageConfig := *c
 	networkConfig := *c
-	if err := setConfigDefaults(&authConfig, "/apis/authorization.openshift.io"); err != nil {
+	if err := SetConfigDefaults(&authConfig, "/apis/authorization.openshift.io"); err != nil {
 		return nil, err
 	}
 	authClient, err := rest.RESTClientFor(&authConfig)
@@ -304,14 +304,14 @@ func newForConfig(c *rest.Config) (*OpenshiftClient, error) {
 		return nil, err
 	}
 
-	if err := setConfigDefaults(&imageConfig, "/apis/image.openshift.io"); err != nil {
+	if err := SetConfigDefaults(&imageConfig, "/apis/image.openshift.io"); err != nil {
 		return nil, err
 	}
 	imageClient, err := rest.RESTClientFor(&imageConfig)
 	if err != nil {
 		return nil, err
 	}
-	if err := setConfigDefaults(&networkConfig, "/apis/network.openshift.io"); err != nil {
+	if err := SetConfigDefaults(&networkConfig, "/apis/network.openshift.io"); err != nil {
 		return nil, err
 	}
 	networkClient, err := rest.RESTClientFor(&networkConfig)
@@ -321,11 +321,11 @@ func newForConfig(c *rest.Config) (*OpenshiftClient, error) {
 	return &OpenshiftClient{authRestClient: authClient, imageRestClient: imageClient, networkClient: networkClient}, nil
 }
 
-func setConfigDefaults(config *rest.Config, APIPath string) error {
+// SetConfigDefaults - Create a rest.Config with an api endpoint
+func SetConfigDefaults(config *rest.Config, APIPath string) error {
 	gv := v1.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = APIPath
-	//	config.APIPath = "/apis/authorization.openshift.io"
 	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
 
 	if config.UserAgent == "" {

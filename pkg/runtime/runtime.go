@@ -19,17 +19,21 @@ package runtime
 import (
 	"encoding/json"
 	"fmt"
+	"unsafe"
 
 	"github.com/openshift/ansible-service-broker/pkg/clients"
 	"github.com/openshift/ansible-service-broker/pkg/metrics"
 
 	logutil "github.com/openshift/ansible-service-broker/pkg/util/logging"
+	auth "k8s.io/api/authorization/v1"
 	apicorev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbac "k8s.io/api/rbac/v1beta1"
 	kapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeversiontypes "k8s.io/apimachinery/pkg/version"
+	"k8s.io/client-go/rest"
+	internal_rbac "k8s.io/kubernetes/pkg/apis/rbac"
 )
 
 var log = logutil.NewLog()
@@ -45,6 +49,7 @@ type Runtime interface {
 	DestroySandbox(string, string, []string, string, bool, bool)
 	AddPostCreateSandbox(f PostSandboxCreate)
 	AddPostDestroySandbox(f PostSandboxDestroy)
+	SubjectRulesReview(string) ([]internal_rbac.PolicyRule, error)
 }
 
 // Variables for interacting with runtimes
@@ -321,4 +326,62 @@ func shouldDeleteNamespace(keepNamespace bool,
 		}
 	}
 	return true
+}
+
+// SubjectRulesReview - Verify that the current user can perform a set of actions within a namespace.
+func (p provider) SubjectRulesReview(namespace string) (result []internal_rbac.PolicyRule, err error) {
+	authConfig := rest.Config{}
+	if err := clients.SetConfigDefaults(&authConfig, "/apis/authorization.openshift.io"); err != nil {
+		return nil, err
+	}
+	authRestClient, err := rest.RESTClientFor(&authConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	body := &auth.SelfSubjectRulesReview{
+		Spec: auth.SelfSubjectRulesReviewSpec{
+			Namespace: namespace,
+		},
+	}
+	body.Kind = "SelfSubjectRulesReview"
+	body.APIVersion = "authorization.k8s.io/v1"
+	b, _ := json.Marshal(body)
+	r := &auth.SelfSubjectRulesReview{}
+	err = authRestClient.Post().
+		Namespace(namespace).
+		Resource("selfsubjectrulesreviews").
+		Body(b).
+		Do().
+		Into(r)
+	if err != nil {
+		log.Errorf("error - %v\n", err)
+		return
+	}
+
+	ruleList := []internal_rbac.PolicyRule{}
+	rbacRule := internal_rbac.PolicyRule{}
+	for _, rule := range r.Status.ResourceRules {
+		convert_v1_ResourceRule_To_rbac_Policy_Rule(&rule, rbacRule)
+		ruleList = append(ruleList, rbacRule)
+	}
+
+	for _, rule := range r.Status.NonResourceRules {
+		convert_v1_NonResourceRule_To_rbac_Policy_Rule(&rule, rbacRule)
+		ruleList = append(ruleList, rbacRule)
+	}
+
+	return ruleList, nil
+}
+
+func convert_v1_ResourceRule_To_rbac_Policy_Rule(in *auth.ResourceRule, out internal_rbac.PolicyRule) {
+	out.Verbs = *(*[]string)(unsafe.Pointer(&in.Verbs))
+	out.APIGroups = *(*[]string)(unsafe.Pointer(&in.APIGroups))
+	out.Resources = *(*[]string)(unsafe.Pointer(&in.Resources))
+	out.ResourceNames = *(*[]string)(unsafe.Pointer(&in.ResourceNames))
+}
+
+func convert_v1_NonResourceRule_To_rbac_Policy_Rule(in *auth.NonResourceRule, out internal_rbac.PolicyRule) {
+	out.Verbs = *(*[]string)(unsafe.Pointer(&in.Verbs))
+	out.NonResourceURLs = *(*[]string)(unsafe.Pointer(&in.NonResourceURLs))
 }

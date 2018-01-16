@@ -27,8 +27,10 @@ import (
 	"strconv"
 	"strings"
 
+	runtime "github.com/openshift/ansible-service-broker/pkg/runtime"
 	yaml "gopkg.in/yaml.v1"
-	"k8s.io/kubernetes/pkg/apis/rbac"
+
+	internal_rbac "k8s.io/kubernetes/pkg/apis/rbac"
 	"k8s.io/kubernetes/pkg/registry/rbac/validation"
 
 	"github.com/gorilla/handlers"
@@ -65,7 +67,7 @@ type handler struct {
 	router           mux.Router
 	broker           broker.Broker
 	brokerConfig     *config.Config
-	clusterRoleRules []rbac.PolicyRule
+	clusterRoleRules []internal_rbac.PolicyRule
 }
 
 // authHandler - does the authentication for the routes
@@ -160,7 +162,7 @@ func createVarHandler(r VarHandler) GorillaRouteHandler {
 
 // NewHandler - Create a new handler by attaching the routes and setting logger and broker.
 func NewHandler(b broker.Broker, brokerConfig *config.Config, prefix string,
-	providers []auth.Provider, clusterRoleRules []rbac.PolicyRule) http.Handler {
+	providers []auth.Provider, clusterRoleRules []internal_rbac.PolicyRule) http.Handler {
 	h := handler{
 		router:           *mux.NewRouter(),
 		broker:           b,
@@ -816,12 +818,10 @@ func (h handler) printRequest(req *http.Request) {
 // the rules for the user in the namespace to determine if the user's roles
 // can cover the  all of the cluster role's rules.
 func (h handler) validateUser(userName, namespace string) (bool, int, error) {
-	openshiftClient, err := clients.Openshift()
-	if err != nil {
-		return false, http.StatusInternalServerError, fmt.Errorf("Unable to connect to the cluster")
-	}
+	fmt.Println(userName)
+
 	// Retrieving the rules for the user in the namespace.
-	prs, err := openshiftClient.SubjectRulesReview(userName, namespace)
+	prs, err := runtime.Provider.SubjectRulesReview(namespace)
 	if err != nil {
 		return false, http.StatusInternalServerError, fmt.Errorf("Unable to connect to the cluster")
 	}
