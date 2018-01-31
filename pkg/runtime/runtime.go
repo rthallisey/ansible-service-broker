@@ -179,13 +179,6 @@ func (p provider) CreateSandbox(podName string,
 		return "", err
 	}
 
-	for _, target := range targets {
-		err = k8scli.CreateRoleBinding(podName, subjects, namespace, target, roleRef)
-		if err != nil {
-			return "", err
-		}
-	}
-
 	// Must create a Network policy to allow for comunication from the APB pod to the target namespace.
 	networkPolicy := &networkingv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{

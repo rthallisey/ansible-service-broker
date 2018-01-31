@@ -154,7 +154,7 @@ func (k KubernetesClient) CreateRoleBinding(
 	roleRef rbac.RoleRef) error {
 
 	log.Noticef("Creating RoleBinding %s", roleBindingName)
-	roleBinding := &rbac.RoleBinding{
+	roleBinding := &rbac.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      roleBindingName,
 			Namespace: targetNamespace,
@@ -162,7 +162,7 @@ func (k KubernetesClient) CreateRoleBinding(
 		Subjects: rbacSubjects,
 		RoleRef:  roleRef,
 	}
-	_, err := k.Client.RbacV1beta1().RoleBindings(targetNamespace).Create(roleBinding)
+	_, err := k.Client.RbacV1beta1().ClusterRoleBindings().Create(roleBinding)
 	if err != nil {
 		return err
 	}
